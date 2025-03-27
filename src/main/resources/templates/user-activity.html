@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User Activity</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .tabs {
+            margin-bottom: 20px;
+        }
+        .tabs a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .tabs a.active {
+            font-weight: bold;
+            color: #000;
+        }
+        .summary-cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0;
+            font-size: 1.2em;
+            color: #666;
+        }
+        .card p {
+            margin: 10px 0 0;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="tabs">
+    <a href="#">Overview</a>
+    <a href="#">Data Table</a>
+    <a href="#">Language Insights</a>
+    <a href="#" class="active">User Activity</a>
+</div>
+
+<div class="summary-cards">
+    <div class="card">
+        <h3>TOTAL ASSIGNED</h3>
+        <p>Currently assigned seats</p>
+        <p th:text="${summaryStats.totalAssigned}">0</p>
+    </div>
+    <div class="card">
+        <h3>ASSIGNED BUT NEVER USED</h3>
+        <p>No-show seats</p>
+        <p th:text="${summaryStats.assignedButNeverUsed}">0</p>
+    </div>
+    <div class="card">
+        <h3>NO ACTIVITY IN THE LAST 7 DAYS</h3>
+        <p>No use in the last 7 days</p>
+        <p th:text="${summaryStats.noActivityLast7Days}">0</p>
+    </div>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th>Login</th>
+        <th>GitHub ID</th>
+        <th>Assigned to the Organization At</th>
+        <th>Last Activity At</th>
+        <th>Last Activity Editor</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="seat : ${seats}">
+        <td th:text="${seat.assignee}">N/A</td>
+        <td>1</td> <!-- GitHub ID sabit olarak 1, API'dan alınabilir -->
+        <td th:text="${seat.createdAt != null} ? ${#temporals.format(seat.createdAt, 'yyyy-MM-dd\'T\'HH:mm:ssXXX')} : 'N/A'">N/A</td>
+        <td th:text="${seat.lastActivityAt != null} ? ${#temporals.format(seat.lastActivityAt, 'yyyy-MM-dd\'T\'HH:mm:ssXXX')} : 'N/A'">N/A</td>
+        <td th:text="${seat.lastActivityEditor}">N/A</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(seats)}">
+        <td colspan="5">No seats available.</td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- Grafik kısmı için yer tutucu (şimdilik veri yok) -->
+<h2>Daily Active Users Over Time</h2>
+<p>Graph placeholder (data not available).</p>
+</body>
+</html>
