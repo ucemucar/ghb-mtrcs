@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.time.LocalDate;
 
 import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -50,10 +51,10 @@ public class MetricsController {
             int assignedButNeverUsed = (int) seats.stream()
                     .filter(seat -> seat.getLastActivityAt() == null)
                     .count();
-            int noActivityLast7Days = (int) seats.stream()
-                    .filter(seat -> seat.getLastActivityAt() != null)
-                    .filter(seat -> ChronoUnit.DAYS.between(LocalDate.parse(seat.getLastActivityAt()), LocalDateTime.now()) > 7)
-                    .count();
+            long noActivityLast7Days = seats != null ? seats.stream()
+                    .filter(seat -> seat.getLastActivityAt() != null &&
+                            LocalDateTime.parse(seat.getLastActivityAt()).isBefore(LocalDateTime.now().minusDays(7)))
+                    .count() : 0;
 
             SummaryStats summaryStats = new SummaryStats(totalAssigned, assignedButNeverUsed, noActivityLast7Days);
 

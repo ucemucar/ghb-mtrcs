@@ -2,9 +2,12 @@ package com.ucemucar.utility.copilot_metrics.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ucemucar.utility.copilot_metrics.model.CombinedResponse;
+import com.ucemucar.utility.copilot_metrics.model.CopilotSeatsResponse;
 import com.ucemucar.utility.copilot_metrics.model.DailyMetricsResponse;
 import com.ucemucar.utility.copilot_metrics.model.Seat;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,15 +32,16 @@ public class GitHubMetricsService {
     public GitHubMetricsService(WebClient webClient, ObjectMapper objectMapper) {
         this.webClient = webClient;
         this.objectMapper = objectMapper;
+        this.objectMapper.registerModule(new JavaTimeModule());
     }
 
     public Mono<CombinedResponse> fetchCombinedData() {
         // Seat verilerini çeken Mono
-        Mono<List<Seat>> seatsMono = webClient.get()
+        Mono<CopilotSeatsResponse> seatsMono = webClient.get()
                 .uri(githubApiSeatsUrl)
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(json -> parseJson(json, new TypeReference<List<Seat>>() {}, "GitHub Copilot Seats"));
+                .map(json -> parseJson(json, new TypeReference<CopilotSeatsResponse>() {}, "GitHub Copilot Seats"));
 
         // Metrics verilerini çeken Mono
         Mono<List<DailyMetricsResponse>> metricsMono = webClient.get()
@@ -53,7 +57,6 @@ public class GitHubMetricsService {
 
     // JSON parse eden yardımcı metod (varsayılan olarak mevcut)
     private <T> T parseJson(String json, TypeReference<T> typeReference, String context) {
-        log.info(json);
         try {
             return objectMapper.readValue(json, typeReference);
         } catch (Exception e) {

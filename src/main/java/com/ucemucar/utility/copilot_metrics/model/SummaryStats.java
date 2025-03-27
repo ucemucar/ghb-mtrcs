@@ -8,5 +8,5 @@ import lombok.Data;
 public class SummaryStats {
     private int totalAssigned;
     private int assignedButNeverUsed;
-    private int noActivityLast7Days;
+    private long noActivityLast7Days;
 }

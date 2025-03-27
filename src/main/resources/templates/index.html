@@ -18,7 +18,7 @@
         <div class="tab active" data-tab="overview">Overview</div>
         <div class="tab" data-tab="dataTable">Data Table</div>
         <div class="tab" data-tab="tbd">Language Insights</div>
-        <div class="tab" data-tab="userActivity">User Activity</div>
+        <div class="tab" data-tab="userActivity">User Activity</div> <!-- Yeni sekme -->
     </div>
 
     <!-- Sekme İçerikleri -->
@@ -89,7 +89,7 @@
             </tr>
             </thead>
             <tbody id="tableBody">
-            <th:block th:each="daily : ${dailyMetrics}">
+            <th:block th:each="daily : ${combinedResponse?.dailyMetrics}">
                 <th:block th:if="${daily.codeCompletionsMetrics != null}"
                           th:each="editor : ${daily.codeCompletionsMetrics.editors}">
                     <th:block th:each="model : ${editor?.models}">
@@ -105,7 +105,7 @@
                     </th:block>
                 </th:block>
             </th:block>
-            <tr th:if="${#lists.isEmpty(dailyMetrics)}">
+            <tr th:if="${#lists.isEmpty(combinedResponse?.dailyMetrics)}">
                 <td colspan="7">No data available</td>
             </tr>
             </tbody>
@@ -135,73 +135,67 @@
         </div>
     </div>
 
-    <!-- Sekme 4: User Activity
+    <!-- Sekme 4: User Activity -->
     <div id="userActivity" class="tab-content">
-
         <div class="metrics-cards">
             <div class="card">
-                <h3>Total Assigned</h3>
+                <h3>Total Assigned Seats</h3>
                 <p>Currently assigned seats</p>
-                <div class="value" th:text="${summaryStats.totalAssigned}">0</div>
+                <div class="value" th:text="${combinedResponse?.seatsResponse?.seats != null ? #lists.size(combinedResponse.seatsResponse.seats) : 0}">0</div>
             </div>
             <div class="card">
                 <h3>Assigned But Never Used</h3>
                 <p>No-show seats</p>
-                <div class="value" th:text="${summaryStats.assignedButNeverUsed}">0</div>
+                <div class="value" id="assignedButNeverUsed">0</div> <!-- JavaScript ile doldurulacak -->
             </div>
             <div class="card">
-                <h3>No Activity in the Last 7 Days</h3>
+                <h3>No Activity in Last 7 Days</h3>
                 <p>No use in the last 7 days</p>
-                <div class="value" th:text="${summaryStats.noActivityLast7Days}">0</div>
+                <div class="value" id="noActivityLast7Days">0</div> <!-- JavaScript ile doldurulacak -->
             </div>
         </div>
 
-
+        <!-- Kullanıcı Aktivite Tablosu -->
         <table id="userActivityTable">
             <thead>
             <tr>
                 <th>Login</th>
-                <th>GitHub ID</th>
-                <th>Assigned to the Organization At</th>
+                <th>Assigned At</th>
                 <th>Last Activity At</th>
                 <th>Last Activity Editor</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="seat : ${seats}">
-                <td th:text="${seat.assignee}">N/A</td>
-
-                <td th:text="${seat.createdAt != null} ? ${#temporals.format(seat.createdAt, 'yyyy-MM-dd\'T\'HH:mm:ssXXX')} : 'N/A'">N/A</td>
-                <td th:text="${seat.lastActivityAt != null} ? ${#temporals.format(seat.lastActivityAt, 'yyyy-MM-dd\'T\'HH:mm:ssXXX')} : 'N/A'">N/A</td>
-                <td th:text="${seat.lastActivityEditor}">N/A</td>
+            <tr th:each="seat : ${combinedResponse?.seatsResponse?.seats}">
+                <td th:text="${seat.assignee.login ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.createdAt ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.lastActivityAt ?: 'N/A'}">N/A</td>
+                <td th:text="${seat.lastActivityEditor ?: 'N/A'}">N/A</td>
             </tr>
-            <tr th:if="${#lists.isEmpty(seats)}">
-                <td colspan="5">No seats available.</td>
+            <tr th:if="${combinedResponse?.seatsResponse?.seats == null or #lists.isEmpty(combinedResponse.seatsResponse.seats)}">
+                <td colspan="4">No seats available</td>
             </tr>
             </tbody>
         </table>
-
-
-        <div class="chart-container">
-            <div id="dailyActivityChart"></div>
-        </div>
     </div>
 </div>
--->
+
 <!-- JavaScript: Sekme Yönetimi, Grafikler, Tablo Sıralama ve Filtreleme -->
 <script th:inline="javascript">
     // Controller'dan gelen veriyi JavaScript'e aktarma
-    const dailyMetrics = /*[[${dailyMetrics}]]*/ [];
+    const combinedResponse = /*[[${combinedResponse}]]*/ {};
+    const dailyMetrics = combinedResponse.dailyMetrics || [];
+    const seats = combinedResponse.seatsResponse ? combinedResponse.seatsResponse.seats : [];
 
     // Veriyi konsola yazdırarak kontrol edelim
+    console.log("combinedResponse:", combinedResponse);
     console.log("dailyMetrics:", dailyMetrics);
+    console.log("seats:", seats);
 
     // Son 28 gün filtresi
     const today = new Date();
     const last28Days = new Date(today);
     last28Days.setDate(today.getDate() - 28);
-    const last7Days = new Date(today);
-    last7Days.setDate(today.getDate() - 7);
     const filteredMetrics = dailyMetrics.filter(day => new Date(day.date) >= last28Days);
 
     // Pasta Grafiği için veri hazırlama: Dillere göre toplam kabul edilen öneriler
@@ -227,57 +221,32 @@
     // Üçüncü sekme için dil bazında toplamlar
     const langMetrics = {};
 
-    // Dördüncü sekme için günlük aktiflik
-    const dailyActivityMap = {};
-
     filteredMetrics.forEach(day => {
-        console.log("Day:", day.date, "codeCompletionsMetrics:", day.copilot_ide_code_completions);
-        if (!day.copilot_ide_code_completions) {
-            console.log("ERROR: copilot_ide_code_completions is missing or undefined!");
-            return;
-        }
-        const editors = day.copilot_ide_code_completions?.editors || [];
-        console.log("Editors:", editors);
-        if (editors.length === 0) {
-            console.log("ERROR: editors array is empty!");
-        }
+        if (!day.codeCompletionsMetrics) return;
+        const editors = day.codeCompletionsMetrics.editors || [];
         editors.forEach(editor => {
             const models = editor?.models || [];
-            console.log("Models:", models);
-            if (models.length === 0) {
-                console.log("ERROR: models array is empty!");
-            }
             models.forEach(model => {
                 const langs = model?.languages || [];
-                console.log("Languages:", langs);
-                if (langs.length === 0) {
-                    console.log("ERROR: languages array is empty!");
-                }
                 langs.forEach(lang => {
                     // Pasta grafiği için: Dil bazında toplam kabul edilen öneriler
-                    const acceptances = Number(lang.total_code_acceptances) || 0;
-                    console.log("Language:", lang.name, "total_code_acceptances:", lang.total_code_acceptances, "Converted Value:", acceptances);
+                    const acceptances = Number(lang.totalCodeAcceptances) || 0;
                     if (acceptances > 0) {
                         langAcceptancesMap[lang.name] = (langAcceptancesMap[lang.name] || 0) + acceptances;
                     }
 
                     // Çizgi grafik için: Tarih bazında toplam öneriler ve kabul edilenler
                     if (!dateMetrics[day.date]) {
-                        dateMetrics[day.date] = {
-                            totalSuggestions: 0,
-                            totalAcceptances: 0,
-                            activeUsers: new Set()
-                        };
+                        dateMetrics[day.date] = { totalSuggestions: 0, totalAcceptances: 0 };
                     }
-                    dateMetrics[day.date].totalSuggestions += (Number(lang.total_code_suggestions) || 0);
-                    dateMetrics[day.date].totalAcceptances += (Number(lang.total_code_acceptances) || 0);
-                    dateMetrics[day.date].activeUsers.add(lang.totalEngagedUsers);
+                    dateMetrics[day.date].totalSuggestions += (Number(lang.totalCodeSuggestions) || 0);
+                    dateMetrics[day.date].totalAcceptances += (Number(lang.totalCodeAcceptances) || 0);
 
                     // Metrikler için toplamları hesapla
-                    totalSuggestions += (Number(lang.total_code_suggestions) || 0);
-                    totalAcceptances += (Number(lang.total_code_acceptances) || 0);
-                    totalLinesSuggested += (Number(lang.total_code_lines_suggested) || 0);
-                    totalLinesAccepted += (Number(lang.total_code_lines_accepted) || 0);
+                    totalSuggestions += (Number(lang.totalCodeSuggestions) || 0);
+                    totalAcceptances += (Number(lang.totalCodeAcceptances) || 0);
+                    totalLinesSuggested += (Number(lang.totalCodeLinesSuggested) || 0);
+                    totalLinesAccepted += (Number(lang.totalCodeLinesAccepted) || 0);
 
                     // Dil filtresi ve üçüncü sekme için dilleri topla
                     languagesSet.add(lang.name);
@@ -291,16 +260,10 @@
                             totalLinesAccepted: 0
                         };
                     }
-                    langMetrics[lang.name].totalSuggestions += (Number(lang.total_code_suggestions) || 0);
-                    langMetrics[lang.name].totalAcceptances += (Number(lang.total_code_acceptances) || 0);
-                    langMetrics[lang.name].totalLinesSuggested += (Number(lang.total_code_lines_suggested) || 0);
-                    langMetrics[lang.name].totalLinesAccepted += (Number(lang.total_code_lines_accepted) || 0);
-
-                    // Dördüncü sekme için günlük aktiflik
-                    if (!dailyActivityMap[day.date]) {
-                        dailyActivityMap[day.date] = new Set();
-                    }
-                    dailyActivityMap[day.date].add(lang.totalEngagedUsers);
+                    langMetrics[lang.name].totalSuggestions += (Number(lang.totalCodeSuggestions) || 0);
+                    langMetrics[lang.name].totalAcceptances += (Number(lang.totalCodeAcceptances) || 0);
+                    langMetrics[lang.name].totalLinesSuggested += (Number(lang.totalCodeLinesSuggested) || 0);
+                    langMetrics[lang.name].totalLinesAccepted += (Number(lang.totalCodeLinesAccepted) || 0);
                 });
             });
         });
@@ -326,10 +289,6 @@
 
     // Pasta Grafiği için: En çok kullanılan 10 dili al (Overview sekmesi)
     const langEntries = Object.entries(langAcceptancesMap);
-    console.log("All Languages and Accepted Suggestions:", langEntries);
-    if (langEntries.length === 0) {
-        console.log("ERROR: langEntries array is empty! No accepted suggestions found for any language.");
-    }
     langEntries.sort((a, b) => b[1] - a[1]);
     const top10Langs = langEntries.slice(0, 10);
     const languages = top10Langs.map(entry => entry[0]);
@@ -342,96 +301,44 @@
         acceptanceCounts.push(dateMetrics[date].totalAcceptances);
     });
 
-    // Grafik verilerini konsola yazdırarak kontrol edelim
-    console.log("Pie Chart Data - Languages (Top 10):", languages);
-    console.log("Pie Chart Data - langAcceptances (Top 10):", langAcceptances);
-    console.log("Line Chart Data - Dates:", dates);
-    console.log("Line Chart Data - suggestionCounts:", suggestionCounts);
-    console.log("Line Chart Data - acceptanceCounts:", acceptanceCounts);
-
-    // Pasta Grafiği: Dillere Göre Kabul Edilen Öneriler (ApexCharts) - Overview Sekmesi
+    // Pasta Grafiği: Dillere Göre Kabul Edilen Öneriler (ApexCharts)
     const pieOptions = {
-        chart: {
-            type: "pie",
-            height: 350
-        },
+        chart: { type: "pie", height: 350 },
         series: langAcceptances.length > 0 ? langAcceptances : [0],
         labels: languages.length > 0 ? languages : ["No Data"],
         colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40", "#FFCD56", "#4BC0C0", "#36A2EB", "#FF6384"],
-        title: {
-            text: "Accepted Suggestions by Language (Top 10)",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        }
+        title: { text: "Accepted Suggestions by Language (Top 10)", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" }
     };
-    console.log("Pie Chart Options:", pieOptions);
     const languagePieChart = new ApexCharts(document.querySelector("#languagePieChart"), pieOptions);
     languagePieChart.render();
 
-    // Çizgi Grafik: Zamanla Öneriler ve Kabul Edilenler (ApexCharts) - Overview Sekmesi
+    // Çizgi Grafik: Zamanla Öneriler ve Kabul Edilenler (ApexCharts)
     const lineOptions = {
-        chart: {
-            type: "line",
-            height: 350
-        },
+        chart: { type: "line", height: 350 },
         series: [
-            {
-                name: "Total Suggestions",
-                data: suggestionCounts.length > 0 ? suggestionCounts : [0]
-            },
-            {
-                name: "Total Acceptances",
-                data: acceptanceCounts.length > 0 ? acceptanceCounts : [0]
-            }
+            { name: "Total Suggestions", data: suggestionCounts.length > 0 ? suggestionCounts : [0] },
+            { name: "Total Acceptances", data: acceptanceCounts.length > 0 ? acceptanceCounts : [0] }
         ],
         xaxis: {
             categories: dates.length > 0 ? dates : ["No Data"],
-            title: {
-                text: "Date"
-            }
+            title: { text: "Date" }
         },
-        yaxis: {
-            min: 0,
-            title: {
-                text: "Count"
-            }
-        },
+        yaxis: { min: 0, title: { text: "Count" } },
         colors: ["#36A2EB", "#FF6384"],
-        title: {
-            text: "Suggestions and Acceptances Over Time",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        },
-        stroke: {
-            curve: "smooth",
-            width: 3
-        },
-        markers: {
-            size: 5
-        },
-        tooltip: {
-            x: {
-                format: "yyyy-MM-dd"
-            }
-        }
+        title: { text: "Suggestions and Acceptances Over Time", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        stroke: { curve: "smooth", width: 3 },
+        markers: { size: 5 },
+        tooltip: { x: { format: "yyyy-MM-dd" } }
     };
     const suggestionsLineChart = new ApexCharts(document.querySelector("#suggestionsLineChart"), lineOptions);
     suggestionsLineChart.render();
 
     // Üçüncü Sekme: Language Insights
-    // Number of Languages
     const numberOfLanguages = languagesSet.size;
     document.getElementById("numberOfLanguages").innerText = numberOfLanguages;
 
-    // Top 5 Languages by Accepted Suggestions
     const top5LangsByAcceptances = Object.entries(langMetrics)
         .sort((a, b) => b[1].totalAcceptances - a[1].totalAcceptances)
         .slice(0, 5);
@@ -439,152 +346,49 @@
     const top5LangAcceptances = top5LangsByAcceptances.map(entry => entry[1].totalAcceptances);
 
     const top5LanguagesChartOptions = {
-        chart: {
-            type: "pie",
-            height: 350
-        },
+        chart: { type: "pie", height: 350 },
         series: top5LangAcceptances.length > 0 ? top5LangAcceptances : [0],
         labels: top5LangNames.length > 0 ? top5LangNames : ["No Data"],
         colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-        title: {
-            text: "Top 5 Languages by Accepted Suggestions (Prompts)",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        }
+        title: { text: "Top 5 Languages by Accepted Suggestions", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" }
     };
     const top5LanguagesChart = new ApexCharts(document.querySelector("#top5LanguagesChart"), top5LanguagesChartOptions);
     top5LanguagesChart.render();
 
-    // Acceptance Rate (by count) for Top 5 Languages
     const top5LangAcceptanceRatesByCount = top5LangsByAcceptances.map(entry => {
         const langData = entry[1];
         return langData.totalSuggestions > 0 ? (langData.totalAcceptances / langData.totalSuggestions) * 100 : 0;
     });
 
     const acceptanceRateByCountChartOptions = {
-        chart: {
-            type: "pie",
-            height: 350
-        },
+        chart: { type: "pie", height: 350 },
         series: top5LangAcceptanceRatesByCount.length > 0 ? top5LangAcceptanceRatesByCount : [0],
         labels: top5LangNames.length > 0 ? top5LangNames : ["No Data"],
         colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-        title: {
-            text: "Acceptance Rate (by count) for Top 5 Languages",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        },
-        tooltip: {
-            y: {
-                formatter: function (val) {
-                    return val.toFixed(2) + "%";
-                }
-            }
-        }
+        title: { text: "Acceptance Rate (by count) for Top 5 Languages", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        tooltip: { y: { formatter: val => val.toFixed(2) + "%" } }
     };
     const acceptanceRateByCountChart = new ApexCharts(document.querySelector("#acceptanceRateByCountChart"), acceptanceRateByCountChartOptions);
     acceptanceRateByCountChart.render();
 
-    // Acceptance Rate (by code lines) for Top 5 Languages
     const top5LangAcceptanceRatesByLines = top5LangsByAcceptances.map(entry => {
         const langData = entry[1];
         return langData.totalLinesSuggested > 0 ? (langData.totalLinesAccepted / langData.totalLinesSuggested) * 100 : 0;
     });
 
     const acceptanceRateByLinesChartOptions = {
-        chart: {
-            type: "pie",
-            height: 350
-        },
+        chart: { type: "pie", height: 350 },
         series: top5LangAcceptanceRatesByLines.length > 0 ? top5LangAcceptanceRatesByLines : [0],
         labels: top5LangNames.length > 0 ? top5LangNames : ["No Data"],
         colors: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"],
-        title: {
-            text: "Acceptance Rate (by code lines) for Top 5 Languages",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        },
-        tooltip: {
-            y: {
-                formatter: function (val) {
-                    return val.toFixed(2) + "%";
-                }
-            }
-        }
+        title: { text: "Acceptance Rate (by lines) for Top 5 Languages", align: "center" },
+        noData: { text: "No data available", align: "center", verticalAlign: "middle" },
+        tooltip: { y: { formatter: val => val.toFixed(2) + "%" } }
     };
     const acceptanceRateByLinesChart = new ApexCharts(document.querySelector("#acceptanceRateByLinesChart"), acceptanceRateByLinesChartOptions);
     acceptanceRateByLinesChart.render();
-
-    // Dördüncü Sekme: User Activity
-    // Günlük aktiflik için veri hazırlama
-    const dailyActivityDates = [];
-    const dailyActivityCounts = [];
-
-    Object.keys(dailyActivityMap).sort().forEach(date => {
-        dailyActivityDates.push(date);
-        dailyActivityCounts.push(dailyActivityMap[date].size);
-    });
-
-    const dailyActivityChartOptions = {
-        chart: {
-            type: "line",
-            height: 350
-        },
-        series: [
-            {
-                name: "Daily Active Users",
-                data: dailyActivityCounts.length > 0 ? dailyActivityCounts : [0]
-            }
-        ],
-        xaxis: {
-            categories: dailyActivityDates.length > 0 ? dailyActivityDates : ["No Data"],
-            title: {
-                text: "Date"
-            }
-        },
-        yaxis: {
-            min: 0,
-            title: {
-                text: "Number of Active Users"
-            }
-        },
-        colors: ["#36A2EB"],
-        title: {
-            text: "Daily Active Users Over Time",
-            align: "center"
-        },
-        noData: {
-            text: "No data available",
-            align: "center",
-            verticalAlign: "middle"
-        },
-        stroke: {
-            curve: "smooth",
-            width: 3
-        },
-        markers: {
-            size: 5
-        },
-        tooltip: {
-            x: {
-                format: "yyyy-MM-dd"
-            }
-        }
-    };
-    const dailyActivityChart = new ApexCharts(document.querySelector("#dailyActivityChart"), dailyActivityChartOptions);
-    dailyActivityChart.render();
 
     // Sekme Yönetimi
     function openTab(tabName) {
@@ -593,11 +397,17 @@
 
         for (let i = 0; i < tabs.length; i++) {
             tabs[i].classList.remove("active");
-            contents[i].classList.remove("active");
+            if (contents[i]) contents[i].classList.remove("active");
         }
 
-        document.getElementById(tabName).classList.add("active");
-        document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add("active");
+        const contentElement = document.getElementById(tabName);
+        const tabElement = document.querySelector(`.tab[data-tab="${tabName}"]`);
+
+        if (contentElement) contentElement.classList.add("active");
+        else console.warn(`Content element with ID "${tabName}" not found.`);
+
+        if (tabElement) tabElement.classList.add("active");
+        else console.warn(`Tab element with data-tab="${tabName}" not found.`);
     }
 
     // Sekmelere tıklama olaylarını ekle
@@ -618,7 +428,6 @@
         const table = document.getElementById("metricsTable");
         const tbody = table.getElementsByTagName("tbody")[0];
         const rows = Array.from(tbody.getElementsByTagName("tr"));
-
         const dataRows = rows.filter(row => row.cells.length > 1);
 
         if (dataRows.length === 0) return;
@@ -642,11 +451,8 @@
             return 0;
         });
 
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
-        }
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
         dataRows.forEach(row => tbody.appendChild(row));
-
         if (rows.length !== dataRows.length) {
             const noDataRow = rows.find(row => row.cells.length === 1);
             if (noDataRow) tbody.appendChild(noDataRow);
@@ -659,24 +465,14 @@
         const languageFilter = document.getElementById("languageFilter").value;
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.getElementsByTagName("tr"));
-
-        // "No data available" satırını hariç tut
         const dataRows = rows.filter(row => row.cells.length > 1);
         const noDataRow = rows.find(row => row.cells.length === 1);
 
-        // Filtreleme
         let filteredRows = dataRows;
-        if (dateFilter) {
-            filteredRows = filteredRows.filter(row => row.cells[0].innerText === dateFilter);
-        }
-        if (languageFilter) {
-            filteredRows = filteredRows.filter(row => row.cells[1].innerText === languageFilter);
-        }
+        if (dateFilter) filteredRows = filteredRows.filter(row => row.cells[0].innerText === dateFilter);
+        if (languageFilter) filteredRows = filteredRows.filter(row => row.cells[1].innerText === languageFilter);
 
-        // Tabloyu güncelle
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
-        }
+        while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
         if (filteredRows.length > 0) {
             filteredRows.forEach(row => tbody.appendChild(row));
         } else {
@@ -690,6 +486,23 @@
             tbody.appendChild(noDataRowClone);
         }
     }
+
+    const assignedButNeverUsed = seats.filter(seat => seat.lastActivityAt === null).length;
+    const noActivityLast7Days = seats.filter(seat => {
+        if (seat.lastActivityAt) {
+            const lastActivityDate = new Date(seat.lastActivityAt);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            return lastActivityDate < sevenDaysAgo;
+        }
+        return false;
+    }).length;
+
+    document.getElementById("assignedButNeverUsed").innerText = assignedButNeverUsed;
+    document.getElementById("noActivityLast7Days").innerText = noActivityLast7Days;
+
+    console.log("assignedButNeverUsed" + assignedButNeverUsed);
+    console.log("noActivityLast7Days" + noActivityLast7Days);
 </script>
 </body>
 </html>
