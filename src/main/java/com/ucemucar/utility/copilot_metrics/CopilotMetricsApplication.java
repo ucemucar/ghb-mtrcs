@@ -6,8 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class CopilotMetricsApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(CopilotMetricsApplication.class, args);
-	}
+    public static void main(String[] args) {
+
+        SpringApplication.run(CopilotMetricsApplication.class, args);
+    }
 
 }

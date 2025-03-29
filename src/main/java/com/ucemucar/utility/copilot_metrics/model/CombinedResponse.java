@@ -8,6 +8,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class CombinedResponse {
+
     private CopilotSeatsResponse seatsResponse;
     private List<DailyMetricsResponse> dailyMetrics;
+
 }

@@ -14,7 +14,6 @@ h1 {
     color: #333;
 }
 
-/* Sekme Stilleri */
 .tab-menu {
     display: flex;
     border-bottom: 2px solid #e0e0e0;
@@ -46,7 +45,6 @@ h1 {
     display: block;
 }
 
-/* Metrik Kart Stilleri */
 .metrics-cards {
     display: flex;
     justify-content: space-between;
@@ -57,7 +55,7 @@ h1 {
     flex: 1;
     background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 20px;
     margin: 0 10px;
     text-align: center;
@@ -86,7 +84,6 @@ h1 {
     color: #333;
 }
 
-/* Grafik Stilleri */
 .chart-container {
     width: 45%;
     display: inline-block;
@@ -95,10 +92,10 @@ h1 {
     background-color: #fff;
     padding: 10px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Filtre Stilleri */
+
 .filters {
     display: flex;
     gap: 20px;
@@ -124,7 +121,6 @@ h1 {
     width: 200px;
 }
 
-/* Tablo Stilleri */
 table {
     width: 100%;
     border-collapse: separate;
@@ -133,7 +129,7 @@ table {
     background-color: #fff;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 th, td {
@@ -174,4 +170,59 @@ tr:hover {
 td {
     color: #333;
     font-size: 14px;
+}
+
+.charts-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 20px;
+    width: 100%;
+}
+
+.chart-container {
+    flex: 1;
+    min-width: 0;
+    max-width: 33%;
+}
+
+.line-chart-container {
+    width: 100%;
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .charts-row {
+        flex-direction: column;
+    }
+    .chart-container {
+        max-width: 100%;
+    }
+}
+.metrics-cards {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.card {
+    flex: 1;
+    min-width: 150px;
+}
+.charts-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 20px;
+    width: 100%;
+    margin-top: 20px;
+}
+.chart-container {
+    flex: 1;
+    min-width: 0;
+    max-width: 33%;
+}
+.line-chart-container {
+    width: 100%;
+    margin-top: 20px;
 }
